@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MADONNA</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-width: 320px;
+  padding: 20px;
+}
+
+.container {
+  text-align: center;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.tagline {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.status-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: none;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.icon-container {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Checking State */
+#checking {
+  display: block;
+}
+
+#checking .icon-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+#checking .spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+#checking .status-title {
+  color: #a78bfa;
+}
+
+/* Benign State */
+#benign .icon-container {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+}
+
+#benign .status-title {
+  color: #34d399;
+}
+
+#benign .status-card {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Malicious State */
+#malicious .icon-container {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+  animation: pulse 0.5s ease-in-out infinite;
+}
+
+#malicious .status-title {
+  color: #f87171;
+}
+
+#malicious .status-card {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.status-message {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+}
+
+.shield-icon {
+  fill: none;
+  stroke: white;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.footer {
+  margin-top: 16px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+}
+</style>
+
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">MADONNA</div>
+      <div class="tagline">Malicious Domain Detection</div>
+    </div>
+
+    <div id="checking">
+      <div class="status-card" style="display: block;">
+        <div class="icon-container">
+          <div class="spinner"></div>
+        </div>
+        <div class="status-title">Analyzing Domain...</div>
+        <div class="status-message">Please wait while we check this website for potential threats.</div>
+      </div>
+    </div>
+
+    <div id="benign">
+      <div class="status-card">
+        <div class="icon-container">
+          <svg class="icon shield-icon" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9 12 11 14 15 10"/>
+          </svg>
+        </div>
+        <div class="status-title">Website is Safe</div>
+        <div class="status-message">This domain appears to be legitimate. You can proceed safely.</div>
+      </div>
+    </div>
+
+    <div id="malicious">
+      <div class="status-card">
+        <div class="icon-container">
+          <svg class="icon shield-icon" viewBox="0 0 24 24">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="status-title">Warning: Threat Detected!</div>
+        <div class="status-message">This domain appears to be malicious. We recommend leaving this site immediately.</div>
+      </div>
+    </div>
+
+    <div class="footer">Powered by Neural Network Analysis</div>
+  </div>
+</body>
+<script src="script.js"></script>
+</html>
