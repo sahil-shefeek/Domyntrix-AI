@@ -1,14 +1,19 @@
 import time
 import asyncio
 from threading import Lock
+from contextlib import asynccontextmanager
 
 import numpy as np
 import tensorflow as tf
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import redis.asyncio as redis
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 import feature_extractions
+from database import get_session
+from models import ScanRecord
 
 interpreter = tf.lite.Interpreter(model_path="lite_model_optimized_float16.tflite")
 interpreter.allocate_tensors()
@@ -19,7 +24,23 @@ input_shape = input_details[0]["shape"]
 interpreter_lock = Lock()
 
 
-app = FastAPI()
+redis_client = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global redis_client
+    redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    try:
+        await redis_client.ping()
+        print("INFO: Connected to Redis successfully.")
+    except Exception as e:
+        print(f"WARNING: Failed to connect to Redis during startup: {e}")
+    yield
+    await redis_client.aclose()
+
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -43,7 +64,7 @@ def run_inference(inp):
 
 
 @app.post("/test_url")
-async def get(request: Request):
+async def get(request: Request, session: AsyncSession = Depends(get_session)):
     data = await request.json()
     test_url = data["url"]
     print(f"Analyzing URL: {test_url}")
@@ -58,6 +79,15 @@ async def get(request: Request):
     )
     domain = test_url.split("/")[0]
 
+    if redis_client:
+        try:
+            cached_val = await redis_client.get(domain)
+            if cached_val is not None:
+                print(f"Cache hit for domain: {domain}")
+                return {"mal_status": int(cached_val)}
+        except Exception as e:
+            print(f"WARNING: Redis cache GET failed for {domain}: {e}")
+
     features_array = await feature_extractions.extract_features(domain)
 
     X_test = np.array(features_array, dtype=np.uint32)
@@ -67,9 +97,23 @@ async def get(request: Request):
     malicious_status = await asyncio.to_thread(run_inference, inp)
 
     end_time = time.time()
-    inference_time = (end_time - start_time) * 1000  # Convert to ms
-    print(f"Inference Time: {inference_time:.2f} ms")
+    inference_time_ms = (end_time - start_time) * 1000  # Convert to ms
+    print(f"Inference Time: {inference_time_ms:.2f} ms")
     print(f"Malicious Status: {malicious_status}")
+
+    if redis_client:
+        try:
+            await redis_client.set(domain, malicious_status, ex=86400)
+        except Exception as e:
+            print(f"WARNING: Redis cache SET failed for {domain}: {e}")
+
+    record = ScanRecord(
+        domain=domain,
+        malicious_status=malicious_status,
+        inference_time_ms=inference_time_ms,
+    )
+    session.add(record)
+    await session.commit()
 
     return {"mal_status": malicious_status}
 
