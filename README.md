@@ -1,6 +1,4 @@
-# MADONNA
-
-> **M**alicious **A**nd **D**angerous **O**nline **N**etwork **N**ame **A**nalysis
+# Domyntrix AI
 
 Browser-Based Malicious Domain Detection through Optimized Neural Network with Feature Analysis
 
@@ -12,7 +10,7 @@ Browser-Based Malicious Domain Detection through Optimized Neural Network with F
 
 ## 📖 About
 
-MADONNA is a real-time malicious domain detection system that combines a Chrome browser extension with a neural network-powered backend API. It analyzes domain features to identify potentially harmful websites before users interact with them.
+Domyntrix AI is a real-time malicious domain detection system that combines a Chrome browser extension with a neural network-powered backend API. It analyzes domain features to identify potentially harmful websites before users interact with them.
 
 The full paper was presented at the **38th IFIP TC 11 International Conference on Information Security and Privacy Protection (IFIPSec) - 2023**.
 
@@ -37,7 +35,7 @@ If you use this plugin or model in your research, please cite:
 1. **Clone the repository:**
    ```bash
    git clone <repository-url>
-   cd MADONNA
+   cd Domyntrix-AI
    ```
 
 2. **Install dependencies:**
@@ -45,13 +43,24 @@ If you use this plugin or model in your research, please cite:
    uv sync
    ```
 
-3. **Start the API server:**
+4. **Start the API server (locally):**
    ```bash
    uv run python main.py
    ```
    The server will start at `http://127.0.0.1:5000/`
 
-4. **Load the Chrome extension:**
+5. **Start the API server (via Docker):**
+   ```bash
+   # Starts the API and Redis in detached mode
+   docker compose up --build -d
+   ```
+   
+   To shut down the Docker containers later, run:
+   ```bash
+   docker compose down
+   ```
+
+6. **Load the Chrome extension:**
    - Navigate to `chrome://extensions/`
    - Enable **Developer mode** (toggle in top-right)
    - Click **Load unpacked**
@@ -61,8 +70,8 @@ If you use this plugin or model in your research, please cite:
 
 ## 🔌 Usage
 
-1. Ensure the Flask API server is running
-2. Click the MADONNA extension icon in Chrome
+1. Ensure the FastAPI server is running
+2. Click the Domyntrix AI extension icon in Chrome
 3. The extension will automatically analyze the current tab's domain
 4. View the result:
    - 🟢 **Safe** - Domain appears legitimate
@@ -74,7 +83,7 @@ If you use this plugin or model in your research, please cite:
 
 ```
 ┌─────────────────────┐      HTTP       ┌─────────────────────┐
-│  Chrome Extension   │ ──────────────► │    Flask API        │
+│  Chrome Extension   │ ──────────────► │    FastAPI          │
 │  (Browser Popup)    │                 │  (localhost:5000)   │
 └─────────────────────┘                 └──────────┬──────────┘
                                                    │
@@ -94,8 +103,8 @@ If you use this plugin or model in your research, please cite:
 ### Project Structure
 
 ```
-MADONNA/
-├── main.py                 # Flask API server
+Domyntrix-AI/
+├── main.py                 # FastAPI server
 ├── feature_extractions.py  # Domain feature extraction
 ├── model_prediction.py     # ML model utilities
 ├── lite_model_optimized_float16.tflite  # Optimized neural network
@@ -141,7 +150,7 @@ The model analyzes multiple domain features to detect malicious patterns:
 
 ### System Overview
 
-![MADONNA Overview](https://user-images.githubusercontent.com/102326773/223764566-a9df38e2-2cf3-4f46-aba4-fc93178e9226.png)
+![Domyntrix AI Overview](https://user-images.githubusercontent.com/102326773/223764566-a9df38e2-2cf3-4f46-aba4-fc93178e9226.png)
 
 ---
 
@@ -211,7 +220,3 @@ This project is licensed under the terms specified in [LICENSE.txt](LICENSE.txt)
 - TensorFlow Lite for model optimization
 
 
-
-
-
-# honors-project
