@@ -1,210 +1,330 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>MADONNA</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Domyntrix AI</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  min-width: 320px;
-  padding: 20px;
-}
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-width: 320px;
+      padding: 20px;
+    }
 
-.container {
-  text-align: center;
-}
+    .container {
+      text-align: center;
+    }
 
-.header {
-  margin-bottom: 20px;
-}
+    .header {
+      margin-bottom: 20px;
+      position: relative;
+    }
 
-.logo {
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-}
+    .settings-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.5);
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
 
-.tagline {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
+    .settings-btn:hover {
+      color: #fff;
+    }
 
-.status-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 24px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: none;
-  animation: fadeIn 0.3s ease-out;
-}
+    .settings-btn .icon {
+      width: 20px;
+      height: 20px;
+    }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-}
+    .tagline {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+    .status-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
 
-.icon-container {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
 
-.icon {
-  width: 32px;
-  height: 32px;
-}
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-/* Checking State */
-#checking {
-  display: block;
-}
+    @keyframes pulse {
 
-#checking .icon-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  animation: pulse 1.5s ease-in-out infinite;
-}
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
 
-#checking .spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
 
-#checking .status-title {
-  color: #a78bfa;
-}
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
 
-/* Benign State */
-#benign .icon-container {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
-}
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
-#benign .status-title {
-  color: #34d399;
-}
+    .icon-container {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
 
-#benign .status-card {
-  border-color: rgba(16, 185, 129, 0.3);
-}
+    .icon {
+      width: 32px;
+      height: 32px;
+    }
 
-/* Malicious State */
-#malicious .icon-container {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
-  animation: pulse 0.5s ease-in-out infinite;
-}
+    /* Checking State */
+    #checking {
+      display: block;
+    }
 
-#malicious .status-title {
-  color: #f87171;
-}
+    #checking .icon-container {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
 
-#malicious .status-card {
-  border-color: rgba(239, 68, 68, 0.3);
-}
+    #checking .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
 
-.status-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
+    #checking .status-title {
+      color: #a78bfa;
+    }
 
-.status-message {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-  line-height: 1.5;
-}
+    /* Benign State */
+    #benign .icon-container {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+    }
 
-.scan-details {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  text-align: left;
-}
+    #benign .status-title {
+      color: #34d399;
+    }
 
-.inference-time {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 8px;
-}
+    #benign .status-card {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
 
-.risk-factors {
-  margin: 0;
-  padding-left: 16px;
-  font-size: 13px;
-  color: #fca5a5;
-  line-height: 1.6;
-}
+    /* Malicious State */
+    #malicious .icon-container {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+      animation: pulse 0.5s ease-in-out infinite;
+    }
 
-.shield-icon {
-  fill: none;
-  stroke: white;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+    #malicious .status-title {
+      color: #f87171;
+    }
 
-.footer {
-  margin-top: 16px;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.3);
-}
-</style>
+    #malicious .status-card {
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .status-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .status-message {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.5;
+    }
+
+    .scan-details {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }
+
+    .inference-time {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+    }
+
+    .risk-factors {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 13px;
+      color: #fca5a5;
+      line-height: 1.6;
+    }
+
+    .explainability-section {
+      margin-top: 16px;
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .explainability-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .explainability-header:hover {
+      color: #fff;
+    }
+
+    .explainability-header .chevron {
+      margin-left: auto;
+      transition: transform 0.2s;
+    }
+
+    .explainability-section.collapsed .feature-grid {
+      display: none;
+    }
+
+    .explainability-section.collapsed .explainability-header {
+      margin-bottom: 0;
+    }
+
+    .explainability-section.collapsed .explainability-header .chevron {
+      transform: rotate(-90deg);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .feature-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .feature-label {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .feature-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .feature-item.warning {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .feature-item.warning .feature-value {
+      color: #fca5a5;
+    }
+
+    .feature-item.warning .feature-label {
+      color: rgba(252, 165, 165, 0.8);
+    }
+
+    .shield-icon {
+      fill: none;
+      stroke: white;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .footer {
+      margin-top: 16px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+  </style>
 
 </head>
+
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">MADONNA</div>
+      <div class="logo">Domyntrix AI</div>
       <div class="tagline">Malicious Domain Detection</div>
+      <div class="settings-btn" id="openSettings" title="Settings">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+      </div>
     </div>
 
     <div id="checking">
@@ -221,14 +341,31 @@ body {
       <div class="status-card">
         <div class="icon-container">
           <svg class="icon shield-icon" viewBox="0 0 24 24">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <polyline points="9 12 11 14 15 10"/>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
           </svg>
         </div>
         <div class="status-title">Website is Safe</div>
         <div class="status-message">This domain appears to be legitimate. You can proceed safely.</div>
         <div class="scan-details">
           <div class="inference-time"></div>
+
+          <div class="explainability-section">
+            <div class="explainability-header">
+              <svg class="icon" style="width: 14px; height: 14px; opacity: 0.8;" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              AI Analysis Details
+              <svg class="icon chevron" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="feature-grid"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -237,16 +374,34 @@ body {
       <div class="status-card">
         <div class="icon-container">
           <svg class="icon shield-icon" viewBox="0 0 24 24">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
         </div>
         <div class="status-title">Warning: Threat Detected!</div>
-        <div class="status-message">This domain appears to be malicious. We recommend leaving this site immediately.</div>
+        <div class="status-message">This domain appears to be malicious. We recommend leaving this site immediately.
+        </div>
         <div class="scan-details">
           <div class="inference-time"></div>
           <ul class="risk-factors"></ul>
+
+          <div class="explainability-section">
+            <div class="explainability-header">
+              <svg class="icon" style="width: 14px; height: 14px; opacity: 0.8;" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              AI Analysis Details
+              <svg class="icon chevron" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="feature-grid"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -255,4 +410,5 @@ body {
   </div>
 </body>
 <script src="script.js"></script>
+
 </html>

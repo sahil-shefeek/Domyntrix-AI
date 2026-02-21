@@ -1,6 +1,10 @@
 async function fetchData(current_url) {
 	try {
-		const res = await fetch("http://127.0.0.1:5000/test_url", {
+		const storage = await chrome.storage.local.get(['apiBaseUrl', 'scanHistory']);
+		let baseUrl = storage.apiBaseUrl || "http://127.0.0.1:5000";
+		baseUrl = baseUrl.replace(/\/$/, ''); // Normalization
+
+		const res = await fetch(`${baseUrl}/test_url`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -9,19 +13,85 @@ async function fetchData(current_url) {
 		});
 		const record = await res.json();
 
+		// Save to scan history
+		const newRecord = {
+			url: current_url,
+			status: record.mal_status,
+			timestamp: new Date().toISOString(),
+			features: record.features
+		};
+
+		let history = storage.scanHistory || [];
+		// Keep a max of 50 records. Add new record to front.
+		history.unshift(newRecord);
+		if (history.length > 50) history = history.slice(0, 50);
+		await chrome.storage.local.set({ scanHistory: history });
+
 		// Hide checking state
 		document.querySelector("#checking .status-card").style.display = "none";
 
 		const features = record.features;
 		const inferenceTime = record.inference_time_ms ? record.inference_time_ms.toFixed(2) + " ms" : "N/A";
 
+		function renderFeatures(containerId, featuresData, startCollapsed) {
+			const section = document.querySelector(`${containerId} .explainability-section`);
+			const grid = document.querySelector(`${containerId} .feature-grid`);
+			const header = document.querySelector(`${containerId} .explainability-header`);
+			if (!section || !grid || !featuresData || !header) return;
+
+			grid.innerHTML = "";
+
+			const featureConfig = [
+				{ key: 'life_time', label: 'Domain Age', format: v => v < 0 ? 'Unknown' : v + ' days', isWarning: v => v >= 0 && v < 30 },
+				{ key: 'entropy', label: 'Entropy', format: v => v.toFixed(2), isWarning: v => v > 4.5 },
+				{ key: 'n_countries', label: 'Geo Locations', format: v => v, isWarning: v => v > 1 },
+				{ key: 'n_ns', label: 'Name Servers', format: v => v, isWarning: v => v < 2 },
+				{ key: 'length', label: 'Domain Length', format: v => v, isWarning: v => v > 20 },
+				{ key: 'n_labels', label: 'URL Labels', format: v => v, isWarning: v => v < 10 }
+			];
+
+			featureConfig.forEach(config => {
+				if (featuresData[config.key] !== undefined) {
+					const value = featuresData[config.key];
+					const warning = config.isWarning(value);
+
+					const item = document.createElement('div');
+					item.className = `feature-item ${warning ? 'warning' : ''}`;
+
+					item.innerHTML = `
+						<span class="feature-label">${config.label}</span>
+						<span class="feature-value">${config.format(value)}</span>
+					`;
+					grid.appendChild(item);
+				}
+			});
+
+			if (grid.children.length > 0) {
+				section.style.display = "block";
+				if (startCollapsed) {
+					section.classList.add('collapsed');
+				} else {
+					section.classList.remove('collapsed');
+				}
+
+				// Optional: ensure handler is added only once
+				header.onclick = () => {
+					section.classList.toggle('collapsed');
+				};
+			} else {
+				section.style.display = "none";
+			}
+		}
+
 		if (record.mal_status == 1) {
 			document.querySelector("#malicious .status-card").style.display = "block";
 			document.querySelector("#benign .status-card").style.display = "none";
-			
+
 			const infTimeEl = document.querySelector("#malicious .inference-time");
 			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
-			
+
+			renderFeatures("#malicious", features, false);
+
 			const riskFactorsEl = document.querySelector("#malicious .risk-factors");
 			if (riskFactorsEl) {
 				riskFactorsEl.innerHTML = "";
@@ -31,9 +101,9 @@ async function fetchData(current_url) {
 					li.style.color = "rgba(255,255,255,0.7)";
 					riskFactorsEl.appendChild(li);
 				}
-				
+
 				if (features) {
-					if (features?.life_time < 30) {
+					if (features?.life_time < 30 && features?.life_time >= 0) {
 						const li = document.createElement("li");
 						li.textContent = "Newly registered domain (high risk).";
 						riskFactorsEl.appendChild(li);
@@ -56,6 +126,8 @@ async function fetchData(current_url) {
 
 			const infTimeEl = document.querySelector("#benign .inference-time");
 			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
+
+			renderFeatures("#benign", features, true);
 		}
 	} catch (error) {
 		// Show error state if API is not available
@@ -97,3 +169,14 @@ chrome.tabs.query({
 
 	fetchData(tabURL);
 });
+
+const settingsBtn = document.getElementById('openSettings');
+if (settingsBtn) {
+	settingsBtn.addEventListener('click', () => {
+		if (chrome.runtime.openOptionsPage) {
+			chrome.runtime.openOptionsPage();
+		} else {
+			window.open(chrome.runtime.getURL('options.html'));
+		}
+	});
+}

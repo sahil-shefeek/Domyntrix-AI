@@ -1,11 +1,9 @@
 import time
 import asyncio
 import json
-from threading import Lock
 from contextlib import asynccontextmanager
 
 import numpy as np
-import tensorflow as tf
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -15,14 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 import feature_extractions
 from database import get_session
 from models import ScanRecord
-
-interpreter = tf.lite.Interpreter(model_path="lite_model_optimized_float16.tflite")
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-input_shape = input_details[0]["shape"]
-
-interpreter_lock = Lock()
+from ml_pool import init_pool, acquire_interpreter
 
 
 redis_client = None
@@ -37,6 +28,9 @@ async def lifespan(app: FastAPI):
         print("INFO: Connected to Redis successfully.")
     except Exception as e:
         print(f"WARNING: Failed to connect to Redis during startup: {e}")
+
+    await init_pool("lite_model_optimized_float16.tflite")
+    print("INFO: Initialized TFLite interpreter pool.")
     yield
     await redis_client.aclose()
 
@@ -54,14 +48,6 @@ app.add_middleware(
 @app.get("/")
 async def index():
     return {"Malicious_status": "Yes"}
-
-
-def run_inference(inp):
-    with interpreter_lock:
-        interpreter.set_tensor(input_details[0]["index"], inp)
-        interpreter.invoke()
-        status = int(interpreter.get_tensor(output_details[0]["index"])[0][0])
-    return status
 
 
 @app.post("/test_url")
@@ -117,7 +103,17 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
     inp = np.expand_dims(X_test, axis=0)
     inp = inp.astype(np.float32)
 
-    malicious_status = await asyncio.to_thread(run_inference, inp)
+    async with acquire_interpreter() as model_data:
+        interpreter = model_data["interpreter"]
+        input_details = model_data["input_details"]
+        output_details = model_data["output_details"]
+
+        def _run_inference():
+            interpreter.set_tensor(input_details[0]["index"], inp)
+            interpreter.invoke()
+            return int(interpreter.get_tensor(output_details[0]["index"])[0][0])
+
+        malicious_status = await asyncio.to_thread(_run_inference)
 
     end_time = time.time()
     inference_time_ms = (end_time - start_time) * 1000  # Convert to ms

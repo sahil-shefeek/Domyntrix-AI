@@ -1,5 +1,5 @@
 {
-    "name": "MADONNA",
+    "name": "Domyntrix AI",
     "version": "1.0.0",
     "description": "Browser-Based MAlicious Domain Detection through Optimized Neural Network with Feature Analysis",
     "manifest_version": 3,
@@ -11,8 +11,9 @@
     "author": "RGU-OU",
     "action": {
         "default_popup": "index.html",
-        "default_title": "MADONNA"
+        "default_title": "Domyntrix AI"
     },
+    "options_page": "options.html",
     "content_security_policy": {
         "extension_pages": "script-src 'self'; object-src 'self'"
     }
