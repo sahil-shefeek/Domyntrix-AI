@@ -1,5 +1,4 @@
 import time
-import json
 import asyncio
 from threading import Lock
 

@@ -10,7 +10,6 @@ import os.path
 import sys
 import whois
 import tldextract as tld
-import socket
 from bs4 import BeautifulSoup
 import asyncio
 import aiohttp
@@ -143,7 +142,7 @@ def get_ns_similarity(ns_names, ips):
 
 def get_n_countries(ips):
     ip_countries = set()
-    packagedir = os.path.dirname(__file__)
+    os.path.dirname(__file__)
     # dbpath = os.path.join(packagedir, '../../thirdparty/geoip/GeoLite2-City.mmdb')
     # city_reader = Reader(dbpath)
     try:
@@ -152,7 +151,7 @@ def get_n_countries(ips):
             try:
                 city_resp = city_reader.city(ip)
                 ip_countries.add(city_resp.country.iso_code)
-            except:
+            except Exception:
                 pass
     except Exception:
         pass
