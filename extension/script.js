@@ -12,12 +12,50 @@ async function fetchData(current_url) {
 		// Hide checking state
 		document.querySelector("#checking .status-card").style.display = "none";
 
+		const features = record.features;
+		const inferenceTime = record.inference_time_ms ? record.inference_time_ms.toFixed(2) + " ms" : "N/A";
+
 		if (record.mal_status == 1) {
 			document.querySelector("#malicious .status-card").style.display = "block";
 			document.querySelector("#benign .status-card").style.display = "none";
+			
+			const infTimeEl = document.querySelector("#malicious .inference-time");
+			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
+			
+			const riskFactorsEl = document.querySelector("#malicious .risk-factors");
+			if (riskFactorsEl) {
+				riskFactorsEl.innerHTML = "";
+				if (record.cached) {
+					const li = document.createElement("li");
+					li.textContent = "Verified recently via cache (features retrieved).";
+					li.style.color = "rgba(255,255,255,0.7)";
+					riskFactorsEl.appendChild(li);
+				}
+				
+				if (features) {
+					if (features?.life_time < 30) {
+						const li = document.createElement("li");
+						li.textContent = "Newly registered domain (high risk).";
+						riskFactorsEl.appendChild(li);
+					}
+					if (features?.n_countries > 1) {
+						const li = document.createElement("li");
+						li.textContent = "Resolves to multiple geographic locations.";
+						riskFactorsEl.appendChild(li);
+					}
+					if (features?.n_labels < 10) {
+						const li = document.createElement("li");
+						li.textContent = "Suspiciously low amount of web content.";
+						riskFactorsEl.appendChild(li);
+					}
+				}
+			}
 		} else {
 			document.querySelector("#benign .status-card").style.display = "block";
 			document.querySelector("#malicious .status-card").style.display = "none";
+
+			const infTimeEl = document.querySelector("#benign .inference-time");
+			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
 		}
 	} catch (error) {
 		// Show error state if API is not available

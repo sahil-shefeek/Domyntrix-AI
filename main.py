@@ -1,5 +1,6 @@
 import time
 import asyncio
+import json
 from threading import Lock
 from contextlib import asynccontextmanager
 
@@ -84,11 +85,33 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
             cached_val = await redis_client.get(domain)
             if cached_val is not None:
                 print(f"Cache hit for domain: {domain}")
-                return {"mal_status": int(cached_val)}
+                try:
+                    payload = json.loads(cached_val)
+                except ValueError:
+                    payload = {"mal_status": int(cached_val)}
+                payload["cached"] = True
+                return payload
         except Exception as e:
             print(f"WARNING: Redis cache GET failed for {domain}: {e}")
 
     features_array = await feature_extractions.extract_features(domain)
+
+    feature_names = [
+        "length",
+        "n_ns",
+        "n_vowels",
+        "life_time",
+        "n_vowel_chars",
+        "n_constant_chars",
+        "n_nums",
+        "n_other_chars",
+        "entropy",
+        "n_mx",
+        "ns_similarity",
+        "n_countries",
+        "n_labels",
+    ]
+    features_dict = dict(zip(feature_names, features_array))
 
     X_test = np.array(features_array, dtype=np.uint32)
     inp = np.expand_dims(X_test, axis=0)
@@ -101,9 +124,15 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
     print(f"Inference Time: {inference_time_ms:.2f} ms")
     print(f"Malicious Status: {malicious_status}")
 
+    response_payload = {
+        "mal_status": malicious_status,
+        "inference_time_ms": inference_time_ms,
+        "features": features_dict,
+    }
+
     if redis_client:
         try:
-            await redis_client.set(domain, malicious_status, ex=86400)
+            await redis_client.set(domain, json.dumps(response_payload), ex=86400)
         except Exception as e:
             print(f"WARNING: Redis cache SET failed for {domain}: {e}")
 
@@ -115,7 +144,7 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
     session.add(record)
     await session.commit()
 
-    return {"mal_status": malicious_status}
+    return response_payload
 
 
 if __name__ == "__main__":

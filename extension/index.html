@@ -163,6 +163,27 @@ body {
   line-height: 1.5;
 }
 
+.scan-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.inference-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.risk-factors {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #fca5a5;
+  line-height: 1.6;
+}
+
 .shield-icon {
   fill: none;
   stroke: white;
@@ -206,6 +227,9 @@ body {
         </div>
         <div class="status-title">Website is Safe</div>
         <div class="status-message">This domain appears to be legitimate. You can proceed safely.</div>
+        <div class="scan-details">
+          <div class="inference-time"></div>
+        </div>
       </div>
     </div>
 
@@ -220,6 +244,10 @@ body {
         </div>
         <div class="status-title">Warning: Threat Detected!</div>
         <div class="status-message">This domain appears to be malicious. We recommend leaving this site immediately.</div>
+        <div class="scan-details">
+          <div class="inference-time"></div>
+          <ul class="risk-factors"></ul>
+        </div>
       </div>
     </div>
 
