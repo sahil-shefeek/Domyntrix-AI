@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    expose:
+      - "6379"
+
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/domyntrix.db
+      - MODEL_POOL_SIZE=4
+    depends_on:
+      - redis
+    volumes:
+      - domyntrix_data:/app/data
+
+volumes:
+  domyntrix_data:

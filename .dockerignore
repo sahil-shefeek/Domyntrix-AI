@@ -1,0 +1,6 @@
+.venv
+__pycache__
+domyntrix.db
+.git
+.gitignore
+*.db

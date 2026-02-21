@@ -1,6 +1,7 @@
 import time
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -22,7 +23,8 @@ redis_client = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_client
-    redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_client = redis.Redis(host=redis_host, port=6379, db=0, decode_responses=True)
     try:
         await redis_client.ping()
         print("INFO: Connected to Redis successfully.")
