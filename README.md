@@ -28,7 +28,7 @@ This guide covers everything you need to set up the project locally on your mach
 
 ### 1. Install Prerequisites
 
-You will need **Git**, **Python 3.12 (or higher)**, and the **uv** package manager. 
+You will need **Git** and the **uv** package manager. 
 
 <details open>
 <summary><strong>Windows</strong></summary>
@@ -78,7 +78,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 </details>
 
 <details>
-<summary><strong>🍎 macOS</strong></summary>
+<summary><strong>macOS</strong></summary>
 
 Open your **Terminal** and run:
 Install Homebrew (if not already installed)
@@ -86,9 +86,9 @@ Install Homebrew (if not already installed)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-Install Git, Python, and uv using Homebrew
+Install Git and uv using Homebrew
 ```bash
-brew install git python3 uv
+brew install git uv
 ```
 </details>
 
