@@ -24,55 +24,135 @@ If you use this plugin or model in your research, please cite:
 
 ## 🚀 Getting Started
 
-### Prerequisites
+This guide covers everything you need to set up the project locally on your machine. Choose the instructions for your specific operating system below.
 
-- Python 3.12 or higher
-- [uv](https://docs.astral.sh/uv/) - Fast Python package manager
-- Google Chrome browser
+### 1. Install Prerequisites
 
-### Installation
+You will need **Git**, **Python 3.12 (or higher)**, and the **uv** package manager. 
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd Domyntrix-AI
-   ```
+<details open>
+<summary><strong>Windows</strong></summary>
 
-2. **Install dependencies:**
-   ```bash
-   uv sync
-   ```
+Open **PowerShell** as Administrator and run:
+Install Git (if not already installed)
+```powershell
+winget install --id Git.Git -e --source winget
+```
+Install uv (Python package manager) (if not already installed)
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+*Note: You may need to restart your terminal after installation.*
+</details>
 
-4. **Start the API server (locally):**
-   ```bash
-   uv run python main.py
-   ```
-   The server will start at `http://127.0.0.1:5000/`
+<details>
+<summary><strong>Linux (Debian/Ubuntu)</strong></summary>
 
-5. **Start the API server (via Docker):**
-   ```bash
-   # Starts the API and Redis in detached mode
-   docker compose up --build -d
-   ```
-   
-   To shut down the Docker containers later, run:
-   ```bash
-   docker compose down
-   ```
+Open your terminal and run:
+Update and install Git (if not already installed)
+```bash
+sudo apt update && sudo apt install -y git
+```
 
-6. **Load the Chrome extension:**
-   - Navigate to `chrome://extensions/`
-   - Enable **Developer mode** (toggle in top-right)
-   - Click **Load unpacked**
-   - Select the `extension/` folder inside the project
+Install uv (Python package manager)
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+*Note: Restart your terminal or run `source $HOME/.local/bin/env` to apply changes.*
+</details>
+
+<details>
+<summary><strong>🎩 Linux (Fedora)</strong></summary>
+
+Open your terminal and run:
+Install Git (if not already installed)
+```bash
+sudo dnf upgrade --refresh
+sudo dnf install -y git
+```
+Install uv (Python package manager)
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+*Note: Restart your terminal or run `source $HOME/.local/bin/env` to apply changes.*
+</details>
+
+<details>
+<summary><strong>🍎 macOS</strong></summary>
+
+Open your **Terminal** and run:
+Install Homebrew (if not already installed)
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Install Git, Python, and uv using Homebrew
+```bash
+brew install git python3 uv
+```
+</details>
+
+### 2. Clone the Repository & Setup Project
+
+Once the prerequisites are installed, open your terminal (or PowerShell on Windows) and run the following commands:
+
+1. Clone the repository
+```bash
+git clone https://github.com/sahil-shefeek/Domyntrix-AI
+cd Domyntrix-AI
+```
+
+2. Install dependencies using uv
+```bash
+uv sync
+```
+
+3. Apply database migrations
+```bash
+uv run alembic upgrade head
+```
+
+### 3. Run the API Server
+
+You can run the API server locally on your machine or entirely inside a Docker container. Both options require [Docker](https://docs.docker.com/get-docker/) (or a compatible container runtime).
+
+**Option A: Run Locally (Recommended for Development)**
+Start Redis in detached mode
+```bash
+docker compose up redis -d
+```
+
+Start the FastAPI server natively
+```bash
+uv run python main.py
+```
+*The server will start at `http://127.0.0.1:5000/`*
+
+**Option B: Run entirely via Docker**
+Starts the API and Redis in detached mode
+```bash
+docker compose up --build -d
+```
+
+To shut down the containers later:
+```bash
+docker compose down
+```
+
+### 4. Load the Chrome Extension
+
+1. Open Google Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** (toggle switch in the top-right corner).
+3. Click the **Load unpacked** button.
+4. Select the `extension/` folder located inside your cloned `Domyntrix-AI` project directory.
 
 ---
 
 ## 🔌 Usage
 
-1. Ensure the FastAPI server is running
-2. Click the Domyntrix AI extension icon in Chrome
-3. The extension will automatically analyze the current tab's domain
+1. Ensure your FastAPI server is running (Step 3 above).
+2. Click the Domyntrix AI extension icon in your Chrome toolbar.
+3. The extension will automatically extract features and analyze the current tab's domain.
 4. View the result:
    - 🟢 **Safe** - Domain appears legitimate
    - 🔴 **Threat Detected** - Domain appears malicious
@@ -185,15 +265,24 @@ The model analyzes multiple domain features to detect malicious patterns:
 
 ### Running in Development
 
+Install dependencies
 ```bash
-# Install dependencies
 uv sync
+```
 
-# Run the server
+Run database migrations
+```bash
+uv run alembic upgrade head
+```
+
+Run the server
+```bash
 uv run python main.py
+```
 
-# Or with auto-reload (install flask[async] if needed)
-uv run flask --app main run --debug
+Or with auto-reload (install fastapi[standard] if needed)
+```bash
+uv run uvicorn main:app --reload --port 5000
 ```
 
 ### Adding New Dependencies
@@ -218,5 +307,3 @@ This project is licensed under the terms specified in [LICENSE.txt](LICENSE.txt)
 
 - GeoLite2 database by MaxMind
 - TensorFlow Lite for model optimization
-
-
