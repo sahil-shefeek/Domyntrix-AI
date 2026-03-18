@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import redis.asyncio as redis
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, func
 from pydantic import BaseModel
 import tldextract
 
@@ -360,6 +360,79 @@ async def list_blacklist(session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(UserBlacklist).order_by(UserBlacklist.created_at.desc()))
     entries = result.scalars().all()
     return {"entries": [{"domain": e.domain, "note": e.note, "created_at": e.created_at.isoformat()} for e in entries]}
+
+
+@app.get("/stats")
+async def get_stats(session: AsyncSession = Depends(get_session)):
+    # total_scans
+    total_result = await session.execute(select(func.count(ScanRecord.id)))
+    total_scans = total_result.scalar() or 0
+    
+    # total_malicious
+    malicious_result = await session.execute(select(func.count(ScanRecord.id)).where(ScanRecord.malicious_status == 1))
+    total_malicious = malicious_result.scalar() or 0
+    
+    # total_benign
+    benign_result = await session.execute(select(func.count(ScanRecord.id)).where(ScanRecord.malicious_status == 0))
+    total_benign = benign_result.scalar() or 0
+    
+    # avg_inference_time_ms (inference_time_ms > 0)
+    avg_result = await session.execute(select(func.avg(ScanRecord.inference_time_ms)).where(ScanRecord.inference_time_ms > 0))
+    avg_inference_time_ms = avg_result.scalar() or 0.0
+    
+    # whitelist_hits (inference_time_ms == 0 AND (features_json IS NULL OR features_json == '{}'))
+    whitelist_result = await session.execute(
+        select(func.count(ScanRecord.id))
+        .where(ScanRecord.inference_time_ms == 0)
+        .where((ScanRecord.features_json.is_(None)) | (ScanRecord.features_json == '{}'))
+    )
+    whitelist_hits = whitelist_result.scalar() or 0
+    
+    # top_flagged (top 10 domains where malicious_status == 1)
+    top_flagged_stmt = (
+        select(ScanRecord.domain, func.count(ScanRecord.id).label("count"))
+        .where(ScanRecord.malicious_status == 1)
+        .group_by(ScanRecord.domain)
+        .order_by(func.count(ScanRecord.id).desc())
+        .limit(10)
+    )
+    top_flagged_result = await session.execute(top_flagged_stmt)
+    top_flagged = [{"domain": row[0], "count": row[1]} for row in top_flagged_result.all()]
+    
+    # trend (last 14 days, grouped by date)
+    import datetime
+    fourteen_days_ago = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=14)
+    
+    trend_stmt = (
+        select(
+            func.date(ScanRecord.timestamp).label("date"),
+            func.sum(ScanRecord.malicious_status).label("malicious"),
+            func.count(ScanRecord.id).label("total")
+        )
+        .where(ScanRecord.timestamp >= fourteen_days_ago)
+        .group_by(func.date(ScanRecord.timestamp))
+        .order_by(func.date(ScanRecord.timestamp).asc())
+    )
+    trend_result = await session.execute(trend_stmt)
+    trend = []
+    for row in trend_result.all():
+        m = int(row[1]) if row[1] is not None else 0
+        t = int(row[2]) if row[2] is not None else 0
+        trend.append({
+            "date": row[0],
+            "malicious": m,
+            "benign": t - m
+        })
+    
+    return {
+        "total_scans": total_scans,
+        "total_malicious": total_malicious,
+        "total_benign": total_benign,
+        "avg_inference_time_ms": round(float(avg_inference_time_ms), 2),
+        "whitelist_hits": whitelist_hits,
+        "top_flagged": top_flagged,
+        "trend": trend
+    }
 
 
 if __name__ == "__main__":

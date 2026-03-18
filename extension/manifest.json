@@ -25,7 +25,8 @@
         {
             "resources": [
                 "dashboard.html",
-                "dashboard.js"
+                "dashboard.js",
+                "chart.umd.min.js"
             ],
             "matches": [
                 "<all_urls>"
