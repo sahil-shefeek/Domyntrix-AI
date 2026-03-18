@@ -4,9 +4,13 @@
     "description": "Browser-Based MAlicious Domain Detection through Optimized Neural Network with Feature Analysis",
     "manifest_version": 3,
     "permissions": [
+        "activeTab",
         "tabs",
-        "tabGroups",
         "storage"
+    ],
+    "host_permissions": [
+        "http://127.0.0.1:*/",
+        "http://localhost:*/"
     ],
     "author": "RGU-OU",
     "action": {
