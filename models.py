@@ -8,6 +8,8 @@ class ScanRecord(SQLModel, table=True):
     malicious_status: int
     inference_time_ms: float
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    features_json: str | None = Field(default=None)
+    explanations_json: str | None = Field(default=None)
 
 
 class UserWhitelist(SQLModel, table=True):

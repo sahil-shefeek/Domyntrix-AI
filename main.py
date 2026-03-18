@@ -21,6 +21,7 @@ from models import ScanRecord, UserWhitelist, UserBlacklist
 from ml_pool import init_pool, acquire_interpreter
 from whitelist_engine import is_whitelisted, REDIS_USER_WHITELIST_KEY, REDIS_USER_BLACKLIST_KEY, load_tranco_list
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from xai_translator import translate
 
 logging.basicConfig(level=logging.INFO)
 
@@ -184,10 +185,13 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
     print(f"Inference Time: {inference_time_ms:.2f} ms")
     print(f"Malicious Status: {malicious_status}")
 
+    explanations = translate(features_dict)
+
     response_payload = {
         "mal_status": malicious_status,
         "inference_time_ms": inference_time_ms,
         "features": features_dict,
+        "explanations": explanations,
         "whitelisted": False,
         "source": "model",
     }
@@ -202,6 +206,8 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
         domain=domain,
         malicious_status=malicious_status,
         inference_time_ms=inference_time_ms,
+        features_json=json.dumps(features_dict),
+        explanations_json=json.dumps(explanations),
     )
     session.add(record)
     await session.commit()
