@@ -43,8 +43,8 @@ function showError(message) {
 
 async function fetchData(current_url) {
 	try {
-		const storage = await chrome.storage.local.get(['apiBaseUrl', 'scanHistory']);
-		let baseUrl = storage.apiBaseUrl || "http://127.0.0.1:5000";
+		const storage = await chrome.storage.local.get(['apiBaseUrl', 'backendUrl', 'scanHistory']);
+		let baseUrl = storage.backendUrl || storage.apiBaseUrl || "http://127.0.0.1:5000";
 		baseUrl = baseUrl.replace(/\/$/, ''); // Normalization
 
 		// Extract domain

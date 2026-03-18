@@ -256,6 +256,98 @@
             color: rgba(255, 255, 255, 0.5);
             font-size: 14px;
         }
+
+        .panels-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .panel-header h2 {
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .input-row input {
+            flex: 1;
+            margin-bottom: 0;
+            width: auto;
+            max-width: none;
+        }
+
+        .list-area {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .item-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden;
+        }
+
+        .item-domain {
+            font-weight: 500;
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-meta {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-msg {
+            font-size: 13px;
+            min-height: 20px;
+            margin-top: 8px;
+            transition: opacity 0.3s;
+        }
+
+        .status-msg.success { color: #34d399; }
+        .status-msg.error { color: #f87171; }
+
+        .backend-settings {
+            margin-top: 40px;
+        }
     </style>
 </head>
 
@@ -298,13 +390,53 @@
 
         <!-- Settings Tab -->
         <div id="settings" class="tab-content">
-            <h2>Settings</h2>
-            <div class="card">
-                <div class="form-group">
-                    <label for="apiBaseUrl">Backend API URL</label>
-                    <input type="text" id="apiBaseUrl" placeholder="http://127.0.0.1:5000">
+            <div class="panels-container">
+                <!-- Whitelist Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Trusted Domains <span id="whitelistCount" class="badge safe">0</span></h2>
+                    </div>
+                    <div class="card">
+                        <div class="input-row">
+                            <input type="text" id="whitelistDomain" placeholder="Enter domain e.g. example.com">
+                            <input type="text" id="whitelistNote" placeholder="Optional note">
+                            <button id="addWhitelistBtn" class="btn">Add</button>
+                        </div>
+                        <div id="whitelistStatus" class="status-msg"></div>
+                        <div class="list-area" id="whitelistArea">
+                            <!-- Entries injected here -->
+                        </div>
+                    </div>
                 </div>
-                <button id="saveSettingsBtn" class="btn">Save Settings</button>
+
+                <!-- Blacklist Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Blocked Domains <span id="blacklistCount" class="badge malicious">0</span></h2>
+                    </div>
+                    <div class="card">
+                        <div class="input-row">
+                            <input type="text" id="blacklistDomain" placeholder="Enter domain e.g. example.com">
+                            <input type="text" id="blacklistNote" placeholder="Optional note">
+                            <button id="addBlacklistBtn" class="btn">Add</button>
+                        </div>
+                        <div id="blacklistStatus" class="status-msg"></div>
+                        <div class="list-area" id="blacklistArea">
+                            <!-- Entries injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="backend-settings">
+                <h2>Backend Settings</h2>
+                <div class="card">
+                    <div class="form-group">
+                        <label for="backendUrl">Backend API URL</label>
+                        <input type="text" id="backendUrl" placeholder="http://127.0.0.1:5000">
+                    </div>
+                    <div id="backendStatus" class="status-msg"></div>
+                </div>
             </div>
         </div>
     </div>

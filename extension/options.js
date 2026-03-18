@@ -71,31 +71,167 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Settings Logic
-    const apiBaseUrlInput = document.getElementById('apiBaseUrl');
-    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const backendUrlInput = document.getElementById('backendUrl');
+    const backendStatus = document.getElementById('backendStatus');
     const toast = document.getElementById('toast');
 
     async function loadSettings() {
-        const { apiBaseUrl } = await chrome.storage.local.get(['apiBaseUrl']);
-        if (apiBaseUrl) {
-            apiBaseUrlInput.value = apiBaseUrl;
-        } else {
-            apiBaseUrlInput.value = 'http://127.0.0.1:5000';
+        const storage = await chrome.storage.local.get(['apiBaseUrl', 'backendUrl']);
+        let backendUrl = storage.backendUrl;
+
+        // Migration logic
+        if (!backendUrl && storage.apiBaseUrl) {
+            backendUrl = storage.apiBaseUrl;
+            await chrome.storage.local.set({ backendUrl });
+            await chrome.storage.local.remove('apiBaseUrl');
+        }
+
+        backendUrlInput.value = backendUrl || 'http://127.0.0.1:5000';
+    }
+
+    // Debounced URL saving
+    let debounceTimer;
+    backendUrlInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(async () => {
+            let value = backendUrlInput.value.trim();
+            if (!value) {
+                value = 'http://127.0.0.1:5000';
+            }
+            value = value.replace(/\/$/, '');
+            await chrome.storage.local.set({ backendUrl: value });
+            
+            backendStatus.textContent = '✓ Saved successfully';
+            backendStatus.className = 'status-msg success';
+            setTimeout(() => { backendStatus.textContent = ''; }, 3000);
+        }, 500);
+    });
+
+    // Domain Lists Fetching and Rendering
+    async function fetchLists() {
+        const storage = await chrome.storage.local.get(['backendUrl']);
+        const baseUrl = storage.backendUrl || 'http://127.0.0.1:5000';
+
+        try {
+            const [wlRes, blRes] = await Promise.all([
+                fetch(`${baseUrl}/whitelist`).catch(() => null),
+                fetch(`${baseUrl}/blacklist`).catch(() => null)
+            ]);
+
+            if (wlRes && wlRes.ok) {
+                const wlData = await wlRes.json();
+                renderList(wlData.entries || [], document.getElementById('whitelistArea'), 'whitelist', baseUrl);
+                document.getElementById('whitelistCount').textContent = (wlData.entries || []).length;
+            }
+            if (blRes && blRes.ok) {
+                const blData = await blRes.json();
+                renderList(blData.entries || [], document.getElementById('blacklistArea'), 'blacklist', baseUrl);
+                document.getElementById('blacklistCount').textContent = (blData.entries || []).length;
+            }
+        } catch (error) {
+            console.error('Failed to fetch lists:', error);
         }
     }
 
-    saveSettingsBtn.addEventListener('click', async () => {
-        let value = apiBaseUrlInput.value.trim();
-        if (!value) {
-            value = 'http://127.0.0.1:5000';
+    function renderList(entries, containerEl, type, baseUrl) {
+        containerEl.innerHTML = '';
+        entries.forEach(entry => {
+            const row = document.createElement('div');
+            row.className = 'list-item';
+
+            const details = document.createElement('div');
+            details.className = 'item-details';
+
+            const domainSpan = document.createElement('span');
+            domainSpan.className = 'item-domain';
+            domainSpan.textContent = entry.domain;
+
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'item-meta';
+            const dateStr = new Date(entry.created_at).toLocaleString();
+            metaSpan.textContent = entry.note ? `${entry.note} • ${dateStr}` : dateStr;
+
+            details.appendChild(domainSpan);
+            details.appendChild(metaSpan);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-danger';
+            removeBtn.textContent = 'Remove';
+            removeBtn.style.padding = '6px 12px';
+            removeBtn.style.fontSize = '12px';
+
+            removeBtn.addEventListener('click', async () => {
+                removeBtn.disabled = true;
+                try {
+                    const res = await fetch(`${baseUrl}/${type}/${encodeURIComponent(entry.domain)}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) {
+                        showPanelStatus(type, `✓ Removed ${entry.domain}`, 'success');
+                        await fetchLists();
+                    } else {
+                        showPanelStatus(type, '✗ Failed to remove domain', 'error');
+                        removeBtn.disabled = false;
+                    }
+                } catch (error) {
+                    showPanelStatus(type, '✗ Network error', 'error');
+                    removeBtn.disabled = false;
+                }
+            });
+
+            row.appendChild(details);
+            row.appendChild(removeBtn);
+            containerEl.appendChild(row);
+        });
+    }
+
+    function showPanelStatus(type, message, statusClass) {
+        const el = document.getElementById(`${type}Status`);
+        el.textContent = message;
+        el.className = `status-msg ${statusClass}`;
+        setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+
+    async function handleAdd(type) {
+        const domainInput = document.getElementById(`${type}Domain`);
+        const noteInput = document.getElementById(`${type}Note`);
+        const domain = domainInput.value.trim();
+        const note = noteInput.value.trim();
+
+        if (!domain) {
+            showPanelStatus(type, '✗ Domain cannot be empty', 'error');
+            return;
         }
 
-        // Architecture Constraint 3: URL Normalization to prevent // slash issues
-        value = value.replace(/\/$/, '');
+        const storage = await chrome.storage.local.get(['backendUrl']);
+        const baseUrl = storage.backendUrl || 'http://127.0.0.1:5000';
 
-        await chrome.storage.local.set({ apiBaseUrl: value });
-        showToast('Settings Saved');
-    });
+        try {
+            const res = await fetch(`${baseUrl}/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain, note: note || null })
+            });
+
+            if (res.status === 201 || res.status === 200) {
+                showPanelStatus(type, '✓ Added successfully', 'success');
+                domainInput.value = '';
+                noteInput.value = '';
+                await fetchLists();
+            } else if (res.status === 409) {
+                showPanelStatus(type, '✗ Domain already in list', 'error');
+            } else if (res.status === 422) {
+                showPanelStatus(type, '✗ Invalid domain format', 'error');
+            } else {
+                showPanelStatus(type, '✗ Failed to add domain', 'error');
+            }
+        } catch (error) {
+            showPanelStatus(type, '✗ Could not reach backend', 'error');
+        }
+    }
+
+    document.getElementById('addWhitelistBtn').addEventListener('click', () => handleAdd('whitelist'));
+    document.getElementById('addBlacklistBtn').addEventListener('click', () => handleAdd('blacklist'));
 
     function showToast(message) {
         toast.textContent = message;
@@ -108,4 +244,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initial load
     await loadHistory();
     await loadSettings();
+    await fetchLists();
 });
