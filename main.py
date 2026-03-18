@@ -5,16 +5,28 @@ import os
 from contextlib import asynccontextmanager
 
 import numpy as np
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import redis.asyncio as redis
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
+from pydantic import BaseModel
+import tldextract
 
 import feature_extractions
-from database import get_session
-from models import ScanRecord
+from database import get_session, engine
+from models import ScanRecord, UserWhitelist, UserBlacklist
 from ml_pool import init_pool, acquire_interpreter
+from whitelist_engine import is_whitelisted, REDIS_USER_WHITELIST_KEY, REDIS_USER_BLACKLIST_KEY
+
+class WhitelistRequest(BaseModel):
+    domain: str
+    note: str | None = None
+
+class BlacklistRequest(BaseModel):
+    domain: str
+    note: str | None = None
 
 
 redis_client = None
@@ -28,6 +40,20 @@ async def lifespan(app: FastAPI):
     try:
         await redis_client.ping()
         print("INFO: Connected to Redis successfully.")
+        
+        try:
+            async with AsyncSession(engine) as session:
+                wl_result = await session.execute(select(UserWhitelist))
+                for entry in wl_result.scalars().all():
+                    await redis_client.sadd(REDIS_USER_WHITELIST_KEY, entry.domain)
+                    
+                bl_result = await session.execute(select(UserBlacklist))
+                for entry in bl_result.scalars().all():
+                    await redis_client.sadd(REDIS_USER_BLACKLIST_KEY, entry.domain)
+            print("INFO: Hydrated Redis from database.")
+        except Exception as e:
+            print(f"WARNING: Failed to hydrate Redis from DB: {e}")
+            
     except Exception as e:
         print(f"WARNING: Failed to connect to Redis during startup: {e}")
 
@@ -82,6 +108,25 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
         except Exception as e:
             print(f"WARNING: Redis cache GET failed for {domain}: {e}")
 
+    if await is_whitelisted(domain, redis_client):
+        whitelist_payload = {
+            "mal_status": 0,
+            "inference_time_ms": 0.0,
+            "cached": False,
+            "whitelisted": True,
+            "source": "whitelist",
+            "features": {},
+            "explanations": [],
+        }
+        record = ScanRecord(
+            domain=domain,
+            malicious_status=0,
+            inference_time_ms=0.0,
+        )
+        session.add(record)
+        await session.commit()
+        return whitelist_payload
+
     features_array = await feature_extractions.extract_features(domain)
 
     feature_names = [
@@ -126,6 +171,8 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
         "mal_status": malicious_status,
         "inference_time_ms": inference_time_ms,
         "features": features_dict,
+        "whitelisted": False,
+        "source": "model",
     }
 
     if redis_client:
@@ -143,6 +190,105 @@ async def get(request: Request, session: AsyncSession = Depends(get_session)):
     await session.commit()
 
     return response_payload
+
+
+@app.post("/whitelist", status_code=201)
+async def add_whitelist(req: WhitelistRequest, session: AsyncSession = Depends(get_session)):
+    ext = tldextract.extract(req.domain)
+    registered_domain = ext.registered_domain
+    if not registered_domain:
+        raise HTTPException(status_code=422, detail="Invalid domain")
+        
+    result = await session.execute(select(UserWhitelist).where(UserWhitelist.domain == registered_domain))
+    if result.scalars().first():
+        raise HTTPException(status_code=409, detail="Domain already in whitelist")
+        
+    new_entry = UserWhitelist(domain=registered_domain, note=req.note)
+    session.add(new_entry)
+    await session.commit()
+    
+    if redis_client:
+        await redis_client.sadd(REDIS_USER_WHITELIST_KEY, registered_domain)
+        await redis_client.srem(REDIS_USER_BLACKLIST_KEY, registered_domain)
+        await redis_client.delete(registered_domain)
+        
+    return {"status": "added", "domain": registered_domain}
+
+@app.delete("/whitelist/{domain}")
+async def remove_whitelist(domain: str, session: AsyncSession = Depends(get_session)):
+    ext = tldextract.extract(domain)
+    registered_domain = ext.registered_domain
+    if not registered_domain:
+        raise HTTPException(status_code=422, detail="Invalid domain")
+        
+    result = await session.execute(select(UserWhitelist).where(UserWhitelist.domain == registered_domain))
+    entry = result.scalars().first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Domain not found in whitelist")
+        
+    await session.delete(entry)
+    await session.commit()
+    
+    if redis_client:
+        await redis_client.srem(REDIS_USER_WHITELIST_KEY, registered_domain)
+        await redis_client.delete(registered_domain)
+        
+    return {"status": "removed", "domain": registered_domain}
+
+@app.post("/blacklist", status_code=201)
+async def add_blacklist(req: BlacklistRequest, session: AsyncSession = Depends(get_session)):
+    ext = tldextract.extract(req.domain)
+    registered_domain = ext.registered_domain
+    if not registered_domain:
+        raise HTTPException(status_code=422, detail="Invalid domain")
+        
+    result = await session.execute(select(UserBlacklist).where(UserBlacklist.domain == registered_domain))
+    if result.scalars().first():
+        raise HTTPException(status_code=409, detail="Domain already in blacklist")
+        
+    new_entry = UserBlacklist(domain=registered_domain, note=req.note)
+    session.add(new_entry)
+    await session.commit()
+    
+    if redis_client:
+        await redis_client.sadd(REDIS_USER_BLACKLIST_KEY, registered_domain)
+        await redis_client.srem(REDIS_USER_WHITELIST_KEY, registered_domain)
+        await redis_client.delete(registered_domain)
+        
+    return {"status": "added", "domain": registered_domain}
+
+@app.delete("/blacklist/{domain}")
+async def remove_blacklist(domain: str, session: AsyncSession = Depends(get_session)):
+    ext = tldextract.extract(domain)
+    registered_domain = ext.registered_domain
+    if not registered_domain:
+        raise HTTPException(status_code=422, detail="Invalid domain")
+        
+    result = await session.execute(select(UserBlacklist).where(UserBlacklist.domain == registered_domain))
+    entry = result.scalars().first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Domain not found in blacklist")
+        
+    await session.delete(entry)
+    await session.commit()
+    
+    if redis_client:
+        await redis_client.srem(REDIS_USER_BLACKLIST_KEY, registered_domain)
+        await redis_client.delete(registered_domain)
+        
+    return {"status": "removed", "domain": registered_domain}
+
+@app.get("/whitelist")
+async def list_whitelist(session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(UserWhitelist).order_by(UserWhitelist.created_at.desc()))
+    entries = result.scalars().all()
+    return {"entries": [{"domain": e.domain, "note": e.note, "created_at": e.created_at.isoformat()} for e in entries]}
+
+@app.get("/blacklist")
+async def list_blacklist(session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(UserBlacklist).order_by(UserBlacklist.created_at.desc()))
+    entries = result.scalars().all()
+    return {"entries": [{"domain": e.domain, "note": e.note, "created_at": e.created_at.isoformat()} for e in entries]}
 
 
 if __name__ == "__main__":
