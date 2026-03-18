@@ -33,38 +33,65 @@ async function fetchData(current_url) {
 		const features = record.features;
 		const inferenceTime = record.inference_time_ms ? record.inference_time_ms.toFixed(2) + " ms" : "N/A";
 
-		function renderFeatures(containerId, featuresData, startCollapsed) {
+		function renderFeatures(containerId, record, startCollapsed) {
 			const section = document.querySelector(`${containerId} .explainability-section`);
 			const grid = document.querySelector(`${containerId} .feature-grid`);
 			const header = document.querySelector(`${containerId} .explainability-header`);
-			if (!section || !grid || !featuresData || !header) return;
+			if (!section || !grid || !header) return;
+
+			if (record.source === "whitelist" || !record.explanations || record.explanations.length === 0) {
+				if (record.mal_status === 0) {
+					section.style.display = "block";
+					section.innerHTML = `<div style="font-size: 13px; color: #6ee7b7; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); display: flex; align-items: center; gap: 8px;">
+						<svg class="icon" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+						This domain is on your trusted list.
+					</div>`;
+				} else {
+					section.style.display = "none";
+				}
+				return;
+			}
 
 			grid.innerHTML = "";
 
-			const featureConfig = [
-				{ key: 'life_time', label: 'Domain Age', format: v => v < 0 ? 'Unknown' : v + ' days', isWarning: v => v >= 0 && v < 30 },
-				{ key: 'entropy', label: 'Entropy', format: v => v.toFixed(2), isWarning: v => v > 4.5 },
-				{ key: 'n_countries', label: 'Geo Locations', format: v => v, isWarning: v => v > 1 },
-				{ key: 'n_ns', label: 'Name Servers', format: v => v, isWarning: v => v < 2 },
-				{ key: 'length', label: 'Domain Length', format: v => v, isWarning: v => v > 20 },
-				{ key: 'n_labels', label: 'URL Labels', format: v => v, isWarning: v => v < 10 }
-			];
+			let hasHigh = false;
+			let hasMedium = false;
 
-			featureConfig.forEach(config => {
-				if (featuresData[config.key] !== undefined) {
-					const value = featuresData[config.key];
-					const warning = config.isWarning(value);
+			record.explanations.forEach(explanation => {
+				if (explanation.severity === "high") hasHigh = true;
+				if (explanation.severity === "medium") hasMedium = true;
 
-					const item = document.createElement('div');
-					item.className = `feature-item ${warning ? 'warning' : ''}`;
+				const item = document.createElement('div');
+				item.className = `feature-item feature-${explanation.severity}`;
 
-					item.innerHTML = `
-						<span class="feature-label">${config.label}</span>
-						<span class="feature-value">${config.format(value)}</span>
-					`;
-					grid.appendChild(item);
-				}
+				item.innerHTML = `
+					<span class="feature-label">${explanation.label}</span>
+					<span class="feature-value">${explanation.value}</span>
+					<span class="feature-verdict">${explanation.verdict}</span>
+				`;
+				grid.appendChild(item);
 			});
+
+			let headerText = "✓ No Risk Factors Detected";
+			if (hasHigh) {
+				headerText = "⚠ Risk Factors Detected";
+			} else if (hasMedium) {
+				headerText = "⚡ Some Caution Advised";
+			}
+
+			// Keep existing SVG icons, just replace the text node equivalent. 
+			// Easiest is to rewrite the innerHTML of the header keeping the exact SVG paths from index.html
+			header.innerHTML = `
+				<svg class="icon" style="width: 14px; height: 14px; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="12" cy="12" r="10"></circle>
+					<line x1="12" y1="16" x2="12" y2="12"></line>
+					<line x1="12" y1="8" x2="12.01" y2="8"></line>
+				</svg>
+				${headerText}
+				<svg class="icon chevron" style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<polyline points="6 9 12 15 18 9"></polyline>
+				</svg>
+			`;
 
 			if (grid.children.length > 0) {
 				section.style.display = "block";
@@ -74,10 +101,13 @@ async function fetchData(current_url) {
 					section.classList.remove('collapsed');
 				}
 
-				// Optional: ensure handler is added only once
-				header.onclick = () => {
-					section.classList.toggle('collapsed');
-				};
+				// Check if click handler exists to prevent duplicates
+				if (!header.dataset.hasClick) {
+					header.onclick = () => {
+						section.classList.toggle('collapsed');
+					};
+					header.dataset.hasClick = "true";
+				}
 			} else {
 				section.style.display = "none";
 			}
@@ -90,7 +120,7 @@ async function fetchData(current_url) {
 			const infTimeEl = document.querySelector("#malicious .inference-time");
 			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
 
-			renderFeatures("#malicious", features, false);
+			renderFeatures("#malicious", record, false);
 
 			const riskFactorsEl = document.querySelector("#malicious .risk-factors");
 			if (riskFactorsEl) {
@@ -127,7 +157,7 @@ async function fetchData(current_url) {
 			const infTimeEl = document.querySelector("#benign .inference-time");
 			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
 
-			renderFeatures("#benign", features, true);
+			renderFeatures("#benign", record, true);
 		}
 	} catch (error) {
 		// Show error state if API is not available
