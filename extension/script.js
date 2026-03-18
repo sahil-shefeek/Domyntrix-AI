@@ -1,17 +1,88 @@
+const BACKEND_TIMEOUT_MS = 5000;
+
+async function getCachedResult(domain) {
+	const key = "cache:" + domain;
+	const storage = await chrome.storage.local.get([key]);
+	const entry = storage[key];
+
+	if (entry && Date.now() < entry.expiresAt) {
+		return entry.result;
+	} else if (entry) {
+		await chrome.storage.local.remove(key);
+	}
+	return null;
+}
+
+async function setCachedResult(domain, result) {
+	if (result.source === "model") {
+		const key = "cache:" + domain;
+		const entry = {
+			result: result,
+			expiresAt: Date.now() + (30 * 60 * 1000)
+		};
+		await chrome.storage.local.set({ [key]: entry });
+	}
+}
+
+function showError(message) {
+	const checkingCard = document.querySelector("#checking .status-card");
+	if (checkingCard) checkingCard.style.display = "none";
+
+	const benignCard = document.querySelector("#benign .status-card");
+	if (benignCard) benignCard.style.display = "none";
+
+	const maliciousCard = document.querySelector("#malicious .status-card");
+	if (maliciousCard) maliciousCard.style.display = "none";
+
+	const errorCard = document.querySelector("#error .status-card");
+	if (errorCard) errorCard.style.display = "block";
+
+	const errorMessage = document.querySelector("#error .status-message");
+	if (errorMessage) errorMessage.textContent = message;
+}
+
 async function fetchData(current_url) {
 	try {
 		const storage = await chrome.storage.local.get(['apiBaseUrl', 'scanHistory']);
 		let baseUrl = storage.apiBaseUrl || "http://127.0.0.1:5000";
 		baseUrl = baseUrl.replace(/\/$/, ''); // Normalization
 
-		const res = await fetch(`${baseUrl}/test_url`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ url: current_url }),
-		});
-		const record = await res.json();
+		// Extract domain
+		let domain = current_url;
+		try {
+			const urlObj = new URL(current_url);
+			domain = urlObj.hostname.replace(/^www\./, '');
+		} catch (e) {
+			domain = current_url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+		}
+
+		let record;
+		let fromCache = false;
+		const cachedResult = await getCachedResult(domain);
+
+		if (cachedResult) {
+			record = cachedResult;
+			fromCache = true;
+		} else {
+			const fetchPromise = fetch(`${baseUrl}/test_url`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ url: current_url }),
+			});
+
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => {
+					reject(new Error("Timeout"));
+				}, BACKEND_TIMEOUT_MS);
+			});
+
+			const res = await Promise.race([fetchPromise, timeoutPromise]);
+			record = await res.json();
+
+			await setCachedResult(domain, record);
+		}
 
 		// Save to scan history
 		const newRecord = {
@@ -32,6 +103,23 @@ async function fetchData(current_url) {
 
 		const features = record.features;
 		const inferenceTime = record.inference_time_ms ? record.inference_time_ms.toFixed(2) + " ms" : "N/A";
+
+		const setInferenceTime = (selector) => {
+			const el = document.querySelector(selector);
+			if (el) {
+				el.textContent = `Inference Time: ${inferenceTime}`;
+				if (fromCache) {
+					const badge = document.createElement("span");
+					badge.textContent = "⚡ Instant result";
+					badge.style.background = "rgba(255,255,255,0.1)";
+					badge.style.padding = "2px 6px";
+					badge.style.borderRadius = "4px";
+					badge.style.fontSize = "10px";
+					badge.style.marginLeft = "6px";
+					el.appendChild(badge);
+				}
+			}
+		};
 
 		function renderFeatures(containerId, record, startCollapsed) {
 			const section = document.querySelector(`${containerId} .explainability-section`);
@@ -118,7 +206,7 @@ async function fetchData(current_url) {
 			document.querySelector("#benign .status-card").style.display = "none";
 
 			const infTimeEl = document.querySelector("#malicious .inference-time");
-			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
+			if (infTimeEl) setInferenceTime("#malicious .inference-time");
 
 			renderFeatures("#malicious", record, false);
 
@@ -155,16 +243,18 @@ async function fetchData(current_url) {
 			document.querySelector("#malicious .status-card").style.display = "none";
 
 			const infTimeEl = document.querySelector("#benign .inference-time");
-			if (infTimeEl) infTimeEl.textContent = `Inference Time: ${inferenceTime}`;
+			if (infTimeEl) setInferenceTime("#benign .inference-time");
 
 			renderFeatures("#benign", record, true);
 		}
 	} catch (error) {
-		// Show error state if API is not available
-		document.querySelector("#checking .status-card").style.display = "none";
-		document.querySelector("#checking .status-title").textContent = "Connection Error";
-		document.querySelector("#checking .status-message").textContent = "Could not connect to the API server. Make sure it is running on localhost:5000";
-		document.querySelector("#checking .status-card").style.display = "block";
+		let msg = "An unexpected error occurred. Please try again.";
+		if (error.message === "Timeout") {
+			msg = "The Domyntrix server took too long to respond. Is the backend running?";
+		} else if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+			msg = "Could not connect to the Domyntrix server. Please start the backend.";
+		}
+		showError(msg);
 	}
 }
 
