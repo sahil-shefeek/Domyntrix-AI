@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Ensure the database file exists to avoid Docker creating it as a directory
+touch /app/domyntrix.db
+
 echo "Running database migrations..."
 uv run alembic upgrade head
 

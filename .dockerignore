@@ -1,6 +1,11 @@
 .venv
 __pycache__
 domyntrix.db
+GeoLite2-City.mmdb
+extension/
+*.md
 .git
 .gitignore
+test_*.py
+*.pdf
 *.db

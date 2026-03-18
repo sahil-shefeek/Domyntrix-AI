@@ -2,22 +2,40 @@ version: '3.8'
 
 services:
   redis:
-    image: redis:alpine
+    image: redis:7-alpine
     expose:
       - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - domyntrix-net
 
   api:
     build: .
     ports:
       - "5000:5000"
+    env_file:
+      - .env
     environment:
       - REDIS_HOST=redis
-      - DATABASE_URL=sqlite+aiosqlite:////app/data/domyntrix.db
-      - MODEL_POOL_SIZE=4
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
-      - domyntrix_data:/app/data
+      - ./GeoLite2-City.mmdb:/app/GeoLite2-City.mmdb:ro
+      - ./domyntrix.db:/app/domyntrix.db
+    restart: unless-stopped
+    networks:
+      - domyntrix-net
 
 volumes:
-  domyntrix_data:
+  redis_data:
+
+networks:
+  domyntrix-net:
+    driver: bridge
