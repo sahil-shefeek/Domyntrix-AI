@@ -2,6 +2,7 @@ import time
 import asyncio
 import json
 import os
+import logging
 from contextlib import asynccontextmanager
 
 import numpy as np
@@ -18,7 +19,10 @@ import feature_extractions
 from database import get_session, engine
 from models import ScanRecord, UserWhitelist, UserBlacklist
 from ml_pool import init_pool, acquire_interpreter
-from whitelist_engine import is_whitelisted, REDIS_USER_WHITELIST_KEY, REDIS_USER_BLACKLIST_KEY
+from whitelist_engine import is_whitelisted, REDIS_USER_WHITELIST_KEY, REDIS_USER_BLACKLIST_KEY, load_tranco_list
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+logging.basicConfig(level=logging.INFO)
 
 class WhitelistRequest(BaseModel):
     domain: str
@@ -59,7 +63,20 @@ async def lifespan(app: FastAPI):
 
     await init_pool("lite_model_optimized_float16.tflite")
     print("INFO: Initialized TFLite interpreter pool.")
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(load_tranco_list, "interval", weeks=1, args=[redis_client], id="tranco_refresh")
+    
+    try:
+        await load_tranco_list(redis_client)
+    except Exception as e:
+        print(f"WARNING: Initial Tranco list load failed: {e}")
+        
+    scheduler.start()
+    print("INFO: Tranco refresh job scheduled (interval: 1 week)")
+
     yield
+    scheduler.shutdown(wait=False)
     await redis_client.aclose()
 
 
