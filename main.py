@@ -19,7 +19,14 @@ import feature_extractions
 from database import get_session, engine
 from models import ScanRecord, UserWhitelist, UserBlacklist
 from ml_pool import init_pool, acquire_interpreter
-from whitelist_engine import is_whitelisted, REDIS_USER_WHITELIST_KEY, REDIS_USER_BLACKLIST_KEY, load_tranco_list
+from whitelist_engine import (
+    is_whitelisted, 
+    REDIS_USER_WHITELIST_KEY, 
+    REDIS_USER_BLACKLIST_KEY, 
+    load_tranco_list,
+    load_umbrella_list,
+    load_india_seed_list
+)
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from xai_translator import translate
 
@@ -67,14 +74,20 @@ async def lifespan(app: FastAPI):
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(load_tranco_list, "interval", weeks=1, args=[redis_client], id="tranco_refresh")
+    scheduler.add_job(load_umbrella_list, "interval", weeks=1, args=[redis_client], id="umbrella_refresh")
     
     try:
-        await load_tranco_list(redis_client)
+        # Load all whitelists concurrently at startup
+        await asyncio.gather(
+            load_india_seed_list(redis_client),  # fast, no network
+            load_tranco_list(redis_client),
+            load_umbrella_list(redis_client)
+        )
     except Exception as e:
-        print(f"WARNING: Initial Tranco list load failed: {e}")
+        print(f"WARNING: Initial whitelist load failed: {e}")
         
     scheduler.start()
-    print("INFO: Tranco refresh job scheduled (interval: 1 week)")
+    print("INFO: Whitelist refresh jobs scheduled (Tranco & Umbrella, interval: 1 week)")
 
     yield
     scheduler.shutdown(wait=False)
