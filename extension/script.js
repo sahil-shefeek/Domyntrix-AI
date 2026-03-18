@@ -300,3 +300,11 @@ if (settingsBtn) {
 		}
 	});
 }
+
+const dashboardLink = document.getElementById('openDashboard');
+if (dashboardLink) {
+	dashboardLink.addEventListener('click', (e) => {
+		e.preventDefault();
+		chrome.tabs.create({ url: chrome.runtime.getURL("dashboard.html") });
+	});
+}

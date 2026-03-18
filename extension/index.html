@@ -364,6 +364,22 @@
       margin-top: 16px;
       font-size: 10px;
       color: rgba(255, 255, 255, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dashboard-link {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      font-size: 11px;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .dashboard-link:hover {
+      color: #fff;
     }
   </style>
 
@@ -478,7 +494,10 @@
       </div>
     </div>
 
-    <div class="footer">Powered by Neural Network Analysis</div>
+    <div class="footer">
+      <a id="openDashboard" class="dashboard-link">Open Dashboard</a>
+      <span>Powered by Neural Network Analysis</span>
+    </div>
   </div>
 </body>
 <script src="script.js"></script>

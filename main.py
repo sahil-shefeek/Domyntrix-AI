@@ -301,6 +301,54 @@ async def remove_blacklist(domain: str, session: AsyncSession = Depends(get_sess
         
     return {"status": "removed", "domain": registered_domain}
 
+@app.get("/scans")
+async def list_scans(page: int = 1, page_size: int = 20, session: AsyncSession = Depends(get_session)):
+    if page_size > 100:
+        page_size = 100
+    
+    offset = (page - 1) * page_size
+    
+    # Query for count
+    count_stmt = select(ScanRecord)
+    count_result = await session.execute(count_stmt)
+    total = len(count_result.scalars().all()) # This is inefficient for large DBs, but using len on scalars is simple for now. 
+    # Actually, better to use a count function if possible, but len on all scalars is okay for a limited size app.
+    # Wait, in AsyncSession/SQLModel, a better way is select(func.count(ScanRecord.id))
+    
+    from sqlalchemy import func
+    total_result = await session.execute(select(func.count(ScanRecord.id)))
+    total = total_result.scalar()
+    
+    # Query for records
+    stmt = select(ScanRecord).order_by(ScanRecord.timestamp.desc()).offset(offset).limit(page_size)
+    result = await session.execute(stmt)
+    records = result.scalars().all()
+    
+    scans = []
+    for r in records:
+        features = json.loads(r.features_json) if r.features_json else {}
+        explanations = json.loads(r.explanations_json) if r.explanations_json else []
+        scans.append({
+            "id": r.id,
+            "domain": r.domain,
+            "malicious_status": r.malicious_status,
+            "inference_time_ms": r.inference_time_ms,
+            "timestamp": r.timestamp.isoformat(),
+            "features": features,
+            "explanations": explanations
+        })
+    
+    total_pages = (total + page_size - 1) // page_size
+    
+    return {
+        "scans": scans,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
+
+
 @app.get("/whitelist")
 async def list_whitelist(session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(UserWhitelist).order_by(UserWhitelist.created_at.desc()))
