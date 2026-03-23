@@ -166,7 +166,7 @@ async def load_india_seed_list(redis_client) -> dict:
 async def is_whitelisted(domain: str, redis_client) -> bool:
     try:
         extract_result = tldextract.extract(domain)
-        registered_domain = extract_result.registered_domain
+        registered_domain = extract_result.top_domain_under_public_suffix
         
         if not registered_domain:
             return False
