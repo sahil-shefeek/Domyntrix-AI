@@ -21,3 +21,6 @@ wheels/
 # Caches
 .pytest_cache/
 .ruff_cache/
+
+test-dataset/
+evaluation_results.csv
